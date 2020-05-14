@@ -33,10 +33,10 @@ type
     CAIRO_LINE_JOIN_MITER
     CAIRO_LINE_JOIN_ROUND
     CAIRO_LINE_JOIN_BEVEL
-  gint* = cint
+  gint* = cint  # int32
   gstring* = cstring  # gchar *
   gboolean* = bool
-  guint* = cuint
+  guint* = cuint  # uint32
   gdouble* = cdouble
   gint8* = int8
   guint32* = uint32

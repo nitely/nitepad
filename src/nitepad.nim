@@ -38,7 +38,7 @@ func drawMouseMove(
   ev: EventMotion,
   ctx: var CanvasCtx
 ): bool =
-  if (ev.state and GDK_BUTTON_PRESS_MASK.uint32) > 0:
+  if buttonPressMask in ev.state:
     #debugEcho "move"
     doAssert ctx.brushes.len > 0
     ctx.brushes[^1].coors.add((x: ev.x, y: ev.y))
@@ -49,8 +49,8 @@ func drawMousePress(
   ev: EventButton,
   ctx: var CanvasCtx
 ): bool =
-  if ev.button == GDK_BUTTON_PRIMARY:
-    debugEcho "press"
+  if ev.button == buttonPrimary:
+    #debugEcho "press"
     var br = brush(12, 255, 255, 0, 1)
     br.coors.add((x: ev.x, y: ev.y))
     ctx.brushes.add(br)
@@ -64,7 +64,7 @@ func drawMouseRelease(
   w.queueDraw()
 
 func draw(w: DrawingArea, cr: Cairo, ctx: var CanvasCtx): bool =
-  debugEcho "draw"
+  #debugEcho "draw"
   cr.setSourceRgba(0, 0, 0, 1)
   cr.paint()
   for br in ctx.brushes:
@@ -85,10 +85,10 @@ func canvas(ctx: var CanvasCtx): DrawingArea =
   result.signalConnect(evButtonPress, drawMousePress, ctx)
   result.signalConnect(evButtonRelease, drawMouseRelease, ctx)
   result.setEvents(
-    result.getEvents() or
-    GDK_POINTER_MOTION_MASK or
-    GDK_BUTTON_PRESS_MASK or
-    GDK_BUTTON_RELEASE_MASK)
+    result.getEvents() +
+    pointerMotionMask +
+    buttonPressMask +
+    buttonReleaseMask)
 
 func mainWindow(app: App, ctx: var WindowCtx): bool =
   var w = app.newWindow()

@@ -2,14 +2,6 @@
 
 import ./gtkbindings
 
-# XXX remove, make type safe
-export
-  GDK_BUTTON_PRIMARY,
-  GDK_POINTER_MOTION_MASK,
-  GDK_BUTTON_PRESS_MASK,
-  GDK_BUTTON_RELEASE_MASK,
-  GDK_BUTTON1_MOTION_MASK
-
 type
   App* = GtkApplicationPtr
   DrawingArea* = GtkDrawingAreaPtr
@@ -26,14 +18,37 @@ type
   Cairo* = CairoPtr
   EventMotion* = GdkEventMotionPtr
   EventButton* = GdkEventButtonPtr
+  EventMask* = distinct uint
+  MouseButton* = distinct uint
 
 const
   hBox* = GTK_ORIENTATION_HORIZONTAL
   lineCapRound* = CAIRO_LINE_CAP_ROUND
   lineJoinRound* = CAIRO_LINE_JOIN_ROUND
+  buttonPrimary* = GDK_BUTTON_PRIMARY.MouseButton
 
-func setEvents*(w: Widget, events: int32) =
-  gtk_widget_set_events(cast[GtkWidgetPtr](w), events)
+const
+  pointerMotionMask* = GDK_POINTER_MOTION_MASK.EventMask
+  buttonPressMask* = GDK_BUTTON_PRESS_MASK.EventMask
+  buttonReleaseMask* = GDK_BUTTON_RELEASE_MASK.EventMask
+  button1MotionMask* = GDK_BUTTON1_MOTION_MASK.EventMask
+
+func `==`*(a: uint, b: MouseButton): bool =
+  a == b.uint
+func `==`*(a: MouseButton, b: uint): bool =
+  a.uint == b
+
+func contains*(state: uint, mask: EventMask): bool =
+  (state and mask.uint) > 0
+func `+`*(a: int32, b: EventMask): EventMask =
+  (a.uint or b.uint).EventMask
+func `+`*(a: EventMask, b: int32): EventMask =
+  (a.uint or b.uint).EventMask
+func `+`*(a, b: EventMask): EventMask =
+  (a.uint or b.uint).EventMask
+
+func setEvents*(w: Widget, events: EventMask) =
+  gtk_widget_set_events(cast[GtkWidgetPtr](w), events.int32)
 
 func getEvents*(w: Widget): int32 =
   gtk_widget_get_events(cast[GtkWidgetPtr](w))
