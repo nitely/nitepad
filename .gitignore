@@ -1,0 +1,7 @@
+nimcache/
+src/nitepad.out
+nitepad
+tests/tests
+docs/ugh
+bin/*
+bench/bench
