@@ -1,6 +1,6 @@
 nimcache/
 src/nitepad.out
-nitepad
+/nitepad
 tests/tests
 docs/ugh
 bin/*
