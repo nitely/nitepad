@@ -4,7 +4,7 @@ A scratchpad.
 
 > WIP
 
-![nitepad]()
+![nitepad](https://github.com/nitely/nitepad/raw/master/nitepad.png)
 
 ## Run
 
