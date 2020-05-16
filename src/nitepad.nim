@@ -3,22 +3,21 @@
 import nitepad/gtk
 
 type
-  Coor = tuple
-    x, y: float64
+  Point = tuple
+    width, x, y: float64
   Brush = object
-    width: float64
     red, green, blue, alpha: float64
-    coors: seq[Coor]
+    points: seq[Point]
   CanvasCtx = ref object
     brushes: seq[Brush]
+    lastWidth: float64
   WindowCtx = ref object
     canvas: CanvasCtx
 
 func brush(
-  width, red, green, blue, alpha: float64
+  red, green, blue, alpha: float64
 ): Brush =
   Brush(
-    width: width,
     red: red,
     green: green,
     blue: blue,
@@ -33,6 +32,18 @@ func newWindowCtx(): WindowCtx =
   result = WindowCtx(
     canvas: newCanvasCtx())
 
+# XXX use lastWidth for smoother
+#     pressure transitions
+func drawStylusMotion(
+  s: Stylus,
+  arg1, arg2: float64,
+  ctx: var CanvasCtx
+): bool =
+  var pressure: float64
+  if getAxis(s, axisPressure, pressure):
+    doAssert ctx.brushes.len > 0
+    ctx.brushes[^1].points[^1].width *= pressure
+
 func drawMouseMove(
   w: DrawingArea,
   ev: EventMotion,
@@ -41,7 +52,7 @@ func drawMouseMove(
   if buttonPressMask in ev.state:
     #debugEcho "move"
     doAssert ctx.brushes.len > 0
-    ctx.brushes[^1].coors.add((x: ev.x, y: ev.y))
+    ctx.brushes[^1].points.add((width: 10.0, x: ev.x, y: ev.y))
     w.queueDraw()
 
 func drawMousePress(
@@ -51,8 +62,8 @@ func drawMousePress(
 ): bool =
   if ev.button == buttonPrimary:
     #debugEcho "press"
-    var br = brush(12, 255, 255, 0, 1)
-    br.coors.add((x: ev.x, y: ev.y))
+    var br = brush(255, 255, 0, 1)
+    #br.points.add((width: 12.0, x: ev.x, y: ev.y))
     ctx.brushes.add(br)
     w.queueDraw()
 
@@ -63,23 +74,30 @@ func drawMouseRelease(
 ): bool =
   w.queueDraw()
 
+# XXX use surface double buffering
+#     instead of painting/stroke a lot
 func draw(w: DrawingArea, cr: Cairo, ctx: var CanvasCtx): bool =
+  template prev: untyped = br.points[i-1]
+  template curr: untyped = br.points[i]
   #debugEcho "draw"
   cr.setSourceRgba(0, 0, 0, 1)
   cr.paint()
   for br in ctx.brushes:
     #debugEcho br
     cr.setSourceRgba(br.red, br.green, br.blue, br.alpha)
-    cr.setLineWidth(br.width)
     cr.setLineCap()
     cr.setLineJoin()
     cr.newPath()
-    for c in br.coors:
-      cr.lineTo(c.x, c.y)
-    cr.stroke()
+    for i in 1 .. br.points.len-1:
+      cr.setLineWidth(curr.width)
+      cr.moveTo(prev.x, prev.y)
+      cr.lineTo(curr.x, curr.y)
+      cr.stroke()
 
 func canvas(ctx: var CanvasCtx): DrawingArea =
   result = newDrawingArea()
+  var stylus = newStylus(result)
+  stylus.signalConnect(evStylusMotion, drawStylusMotion, ctx)
   result.signalConnect(evDraw, draw, ctx)
   result.signalConnect(evMotion, drawMouseMove, ctx)
   result.signalConnect(evButtonPress, drawMousePress, ctx)
@@ -88,7 +106,8 @@ func canvas(ctx: var CanvasCtx): DrawingArea =
     result.getEvents() +
     pointerMotionMask +
     buttonPressMask +
-    buttonReleaseMask)
+    buttonReleaseMask +
+    touchMask)
 
 func mainWindow(app: App, ctx: var WindowCtx): bool =
   var w = app.newWindow()

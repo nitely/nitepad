@@ -25,6 +25,7 @@ type
   GClosurePtr* = ptr object
   GClosureNotify* = proc (data: pointer, closure: GClosurePtr) {.cdecl.}
   CairoPtr* = ptr object
+  GtkGestureStylusPtr* = ptr object
   CairoLineCap* = enum
     CAIRO_LINE_CAP_BUTT
     CAIRO_LINE_CAP_ROUND
@@ -37,7 +38,7 @@ type
   gstring* = cstring  # gchar *
   gboolean* = bool
   guint* = cuint  # uint32
-  gdouble* = cdouble
+  gdouble* = cdouble  # float64
   gint8* = int8
   guint32* = uint32
   gint16* = int16
@@ -88,6 +89,11 @@ type
     x_root*: gdouble
     y_root*: gdouble
   GdkEventButtonPtr* = ptr GdkEventButton
+  GdkAxisUse* = enum
+    GDK_AXIS_IGNORE
+    GDK_AXIS_X
+    GDK_AXIS_Y
+    GDK_AXIS_PRESSURE
 
 const
   GDK_BUTTON_PRIMARY* = 1
@@ -95,6 +101,7 @@ const
   GDK_BUTTON_PRESS_MASK* = 1 shl 8
   GDK_BUTTON_RELEASE_MASK* = 1 shl 9
   GDK_BUTTON1_MOTION_MASK* = 1 shl 5
+  GDK_TOUCH_MASK* = 1 shl 22
 
 proc gtk_application_new*(
   application_id: gstring,
@@ -166,6 +173,15 @@ proc gtk_widget_queue_draw*(widget: GtkWidgetPtr) {.importc.}
 
 proc gtk_drawing_area_new*(): GtkWidgetPtr {.importc.}
 
+proc gtk_gesture_stylus_new*(
+  widget: GtkWidgetPtr
+): GtkGestureStylusPtr {.importc.}
+proc gtk_gesture_stylus_get_axis*(
+  gesture: GtkGestureStylusPtr,
+  axis: GdkAxisUse,
+  value: ptr gdouble
+): gboolean {.importc.}
+
 proc cairo_set_source_rgba*(
   cr: CairoPtr,
   red: cdouble,
@@ -181,5 +197,7 @@ proc cairo_set_line_join*(cr: CairoPtr, line_join: CairoLineJoin) {.importc.}
 proc cairo_new_path*(cr: CairoPtr) {.importc.}
 proc cairo_line_to*(cr: CairoPtr, x: cdouble, y: cdouble) {.importc.}
 proc cairo_stroke*(cr: CairoPtr) {.importc.}
+proc cairo_move_to*(cr: CairoPtr, x: cdouble, y: cdouble) {.importc.}
+proc cairo_curve_to*(cr: CairoPtr, x1, y1, x2, y2, x3, y3: cdouble) {.importc.}
 
 {.pop.}
