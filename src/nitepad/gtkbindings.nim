@@ -19,12 +19,14 @@ type
   GtkWidgetPtr* = ptr object
   GtkContainerPtr* = ptr object
   GtkWindowPtr* = ptr object
+  GdkWindowPtr* = ptr object
   GtkBoxPtr* = ptr object
   GtkDrawingAreaPtr* = ptr object
   GConnectFlags* = int32
   GClosurePtr* = ptr object
   GClosureNotify* = proc (data: pointer, closure: GClosurePtr) {.cdecl.}
   CairoPtr* = ptr object
+  CairoSurfacePtr* = ptr object
   GtkGestureStylusPtr* = ptr object
   CairoLineCap* = enum
     CAIRO_LINE_CAP_BUTT
@@ -89,11 +91,16 @@ type
     x_root*: gdouble
     y_root*: gdouble
   GdkEventButtonPtr* = ptr GdkEventButton
+  GdkEventConfigurePtr* = ptr object
   GdkAxisUse* = enum
     GDK_AXIS_IGNORE
     GDK_AXIS_X
     GDK_AXIS_Y
     GDK_AXIS_PRESSURE
+  CairoContent* = enum
+    CAIRO_CONTENT_COLOR = 0x1000,
+    CAIRO_CONTENT_ALPHA = 0x2000,
+    CAIRO_CONTENT_COLOR_ALPHA = 0x3000
 
 const
   GDK_BUTTON_PRIMARY* = 1
@@ -144,6 +151,29 @@ proc gtk_window_set_default_size*(
 
 proc gtk_widget_show_all*(widget: GtkWidgetPtr) {.importc.}
 
+proc gtk_widget_get_window*(widget: GtkWidgetPtr): GdkWindowPtr {.importc.}
+
+proc gtk_widget_get_allocated_width*(widget: GtkWidgetPtr): cint {.importc.}
+
+proc gtk_widget_get_allocated_height*(widget: GtkWidgetPtr): cint {.importc.}
+
+proc gtk_widget_set_events*(
+  widget: GtkWidgetPtr,
+  events: gint
+) {.importc.}
+
+proc gtk_widget_get_events*(widget: GtkWidgetPtr): gint {.importc.}
+
+proc gtk_widget_queue_draw*(widget: GtkWidgetPtr) {.importc.}
+
+proc gtk_widget_queue_draw_area*(
+  widget: GtkWidgetPtr,
+  x: gint,
+  y: gint,
+  width: gint,
+  height: gint
+) {.importc.}
+
 proc gtk_box_new*(
   orientation: GtkOrientation,
   spacing: gint
@@ -161,15 +191,6 @@ proc gtk_container_add*(
   container: GtkContainerPtr,
   widget: GtkWidgetPtr
 ) {.importc.}
-
-proc gtk_widget_set_events*(
-  widget: GtkWidgetPtr,
-  events: gint
-) {.importc.}
-
-proc gtk_widget_get_events*(widget: GtkWidgetPtr): gint {.importc.}
-
-proc gtk_widget_queue_draw*(widget: GtkWidgetPtr) {.importc.}
 
 proc gtk_drawing_area_new*(): GtkWidgetPtr {.importc.}
 
@@ -199,5 +220,24 @@ proc cairo_line_to*(cr: CairoPtr, x: cdouble, y: cdouble) {.importc.}
 proc cairo_stroke*(cr: CairoPtr) {.importc.}
 proc cairo_move_to*(cr: CairoPtr, x: cdouble, y: cdouble) {.importc.}
 proc cairo_curve_to*(cr: CairoPtr, x1, y1, x2, y2, x3, y3: cdouble) {.importc.}
+proc cairo_create*(target: CairoSurfacePtr): CairoPtr {.importc.}
+proc cairo_set_source_surface*(
+  cr: CairoPtr,
+  surface: CairoSurfacePtr,
+  x: cdouble,
+  y: cdouble
+) {.importc.}
+
+proc gdk_window_create_similar_surface*(
+  window: GdkWindowPtr,
+  content: CairoContent,
+  width: cint,
+  height: cint
+): CairoSurfacePtr {.importc.}
+
+proc gdk_window_set_event_compression*(
+  window: GdkWindowPtr,
+  event_compression: gboolean
+) {.importc.}
 
 {.pop.}

@@ -18,10 +18,14 @@ type
     evButtonPress = "button-press-event"
     evButtonRelease = "button-release-event"
     evStylusMotion = "motion"
+    evConfig = "configure-event"
+    evRealize = "realize"
   Cairo* = CairoPtr
+  Surface* = CairoSurfacePtr  # Canvas buffer
   Stylus* = GtkGestureStylusPtr
   EventMotion* = GdkEventMotionPtr
   EventButton* = GdkEventButtonPtr
+  EventConfig* = GdkEventConfigurePtr
   EventMask* = distinct uint
   MouseButton* = distinct uint
   AxisUse* = GdkAxisUse
@@ -62,6 +66,28 @@ func getEvents*(w: Widget): int32 {.inline.} =
 
 func queueDraw*(w: Widget) {.inline.} =
   gtk_widget_queue_draw(cast[GtkWidgetPtr](w))
+
+func queueDrawArea*(w: Widget, x, y, width, height: int32) {.inline.} =
+  gtk_widget_queue_draw_area(cast[GtkWidgetPtr](w), x, y, width, height)
+
+func queueDrawCoors*(
+  w: Widget,
+  x1, y1, x2, y2: float64,
+  offset: float64
+) {.inline.} =
+  let ox1 = min(x1, x2)-offset
+  let oy1 = min(y1, y2)-offset
+  let ox2 = max(x1, x2)+offset
+  let oy2 = max(y1, y2)+offset
+  let x = max(0, ox1.toInt-1)
+  let y = max(0, oy1.toInt-1)
+  let wh = max(0, ox2.toInt+1-x)
+  let ht = max(0, oy2.toInt+1-y)
+  let wWh = gtk_widget_get_allocated_width(cast[GtkWidgetPtr](w))
+  let wHt = gtk_widget_get_allocated_height(cast[GtkWidgetPtr](w))
+  let width = min(wWh, wh)
+  let height = min(wHt, ht)
+  w.queueDrawArea(x.int32, y.int32, width.int32, height.int32)
 
 func newStylus*(parent: Widget): Stylus {.inline.} =
   gtk_gesture_stylus_new(cast[GtkWidgetPtr](parent))
@@ -150,6 +176,10 @@ func add*(c: Container, w: Widget) {.inline.} =
 func newDrawingArea*(): DrawingArea {.inline.} =
   cast[DrawingArea](gtk_drawing_area_new())
 
+func setEventCompression*(w: DrawingArea, compress: bool) {.inline.} =
+  gdk_window_set_event_compression(
+    gtk_widget_get_window(cast[GtkWidgetPtr](w)), compress)
+
 func setSourceRgba*(
   cr: Cairo,
   red, green, blue, alpha: float64
@@ -182,3 +212,20 @@ func curveTo*(cr: Cairo, x1, y1, x2, y2, x3, y3: float64) {.inline.} =
 
 func stroke*(cr: Cairo) {.inline.} =
   cairo_stroke(cr)
+
+func setSourceSurface*(
+  cr: Cairo,
+  surface: Surface,
+  x, y: float64
+) {.inline.} =
+  cairo_set_source_surface(cr, surface, x, y)
+
+func newSurface*(w: DrawingArea): Surface {.inline.} =
+  gdk_window_create_similar_surface(
+    gtk_widget_get_window(cast[GtkWidgetPtr](w)),
+    CAIRO_CONTENT_COLOR,
+    gtk_widget_get_allocated_width(cast[GtkWidgetPtr](w)),
+    gtk_widget_get_allocated_height(cast[GtkWidgetPtr](w)))
+
+func newCairo*(surface: Surface): Cairo {.inline.} =
+  cairo_create(surface)
