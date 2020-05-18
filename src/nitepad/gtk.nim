@@ -9,7 +9,8 @@ type
   DrawingArea* = GtkDrawingAreaPtr
   Box* = GtkBoxPtr
   Window* = GtkWindowPtr
-  Container* = Window | Box
+  ScrolledWindow* = GtkScrolledWindowPtr
+  Container* = Window | Box | ScrolledWindow
   Widget* = Container | DrawingArea
   Event* = enum
     evActivate = "activate"
@@ -31,11 +32,13 @@ type
   AxisUse* = GdkAxisUse
 
 const
+  vBox* = GTK_ORIENTATION_VERTICAL
   hBox* = GTK_ORIENTATION_HORIZONTAL
   lineCapRound* = CAIRO_LINE_CAP_ROUND
   lineJoinRound* = CAIRO_LINE_JOIN_ROUND
   buttonPrimary* = GDK_BUTTON_PRIMARY.MouseButton
   axisPressure* = GDK_AXIS_PRESSURE
+  policyAutomatic* = GTK_POLICY_AUTOMATIC
 
 const
   pointerMotionMask* = GDK_POINTER_MOTION_MASK.EventMask
@@ -58,6 +61,9 @@ func `+`*(a: EventMask, b: int32): EventMask {.inline.} =
 func `+`*(a, b: EventMask): EventMask {.inline.} =
   (a.uint or b.uint).EventMask
 
+func setSizeRequest*(w: Widget, width, height: int32) {.inline.} =
+  gtk_widget_set_size_request(cast[GtkWidgetPtr](w), width, height)
+
 func setEvents*(w: Widget, events: EventMask) {.inline.} =
   gtk_widget_set_events(cast[GtkWidgetPtr](w), events.int32)
 
@@ -70,7 +76,7 @@ func queueDraw*(w: Widget) {.inline.} =
 func queueDrawArea*(w: Widget, x, y, width, height: int32) {.inline.} =
   gtk_widget_queue_draw_area(cast[GtkWidgetPtr](w), x, y, width, height)
 
-func queueDrawCoors*(
+func queueDrawArea*(
   w: Widget,
   x1, y1, x2, y2: float64,
   offset: float64
@@ -88,6 +94,15 @@ func queueDrawCoors*(
   let width = min(wWh, wh)
   let height = min(wHt, ht)
   w.queueDrawArea(x.int32, y.int32, width.int32, height.int32)
+
+func newScrolledWindow*(): ScrolledWindow {.inline.} =
+  gtk_scrolled_window_new(nil, nil)
+
+func setMinContentWidth*(sw: ScrolledWindow, w: int32) {.inline.} =
+  gtk_scrolled_window_set_min_content_width(sw, w)
+
+func setPolicy*(sw: ScrolledWindow, h, v = policyAutomatic) {.inline.} =
+  gtk_scrolled_window_set_policy(sw, h, v)
 
 func newStylus*(parent: Widget): Stylus {.inline.} =
   gtk_gesture_stylus_new(cast[GtkWidgetPtr](parent))
@@ -220,10 +235,15 @@ func setSourceSurface*(
 ) {.inline.} =
   cairo_set_source_surface(cr, surface, x, y)
 
-func newSurface*(w: DrawingArea): Surface {.inline.} =
+func newSurface*(w: DrawingArea, width, height: int32): Surface {.inline.} =
   gdk_window_create_similar_surface(
     gtk_widget_get_window(cast[GtkWidgetPtr](w)),
     CAIRO_CONTENT_COLOR,
+    width,
+    height)
+
+func newSurface*(w: DrawingArea): Surface {.inline.} =
+  w.newSurface(
     gtk_widget_get_allocated_width(cast[GtkWidgetPtr](w)),
     gtk_widget_get_allocated_height(cast[GtkWidgetPtr](w)))
 

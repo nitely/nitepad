@@ -28,6 +28,8 @@ type
   CairoPtr* = ptr object
   CairoSurfacePtr* = ptr object
   GtkGestureStylusPtr* = ptr object
+  GtkScrolledWindowPtr* = ptr object
+  GtkAdjustmentPtr* = ptr object
   CairoLineCap* = enum
     CAIRO_LINE_CAP_BUTT
     CAIRO_LINE_CAP_ROUND
@@ -101,6 +103,8 @@ type
     CAIRO_CONTENT_COLOR = 0x1000,
     CAIRO_CONTENT_ALPHA = 0x2000,
     CAIRO_CONTENT_COLOR_ALPHA = 0x3000
+  GtkPolicyType* = enum
+    GTK_POLICY_ALWAYS, GTK_POLICY_AUTOMATIC, GTK_POLICY_NEVER, GTK_POLICY_EXTERNAL
 
 const
   GDK_BUTTON_PRIMARY* = 1
@@ -149,6 +153,12 @@ proc gtk_window_set_default_size*(
   window: GtkWindowPtr, width: gint, height: gint
 ) {.importc.}
 
+proc gtk_widget_set_size_request*(
+  widget: GtkWidgetPtr,
+  width: gint,
+  height: gint
+) {.importc.}
+
 proc gtk_widget_show_all*(widget: GtkWidgetPtr) {.importc.}
 
 proc gtk_widget_get_window*(widget: GtkWidgetPtr): GdkWindowPtr {.importc.}
@@ -190,6 +200,22 @@ proc gtk_box_pack_start*(
 proc gtk_container_add*(
   container: GtkContainerPtr,
   widget: GtkWidgetPtr
+) {.importc.}
+
+proc gtk_scrolled_window_new*(
+  hadjustment: GtkAdjustmentPtr,
+  vadjustment: GtkAdjustmentPtr
+): GtkScrolledWindowPtr {.importc.}
+
+proc gtk_scrolled_window_set_min_content_width*(
+  scrolled_window: GtkScrolledWindowPtr,
+  width: gint
+) {.importc.}
+
+func gtk_scrolled_window_set_policy*(
+  scrolled_window: GtkScrolledWindowPtr,
+  hscrollbar_policy: GtkPolicyType,
+  vscrollbar_policy: GtkPolicyType
 ) {.importc.}
 
 proc gtk_drawing_area_new*(): GtkWidgetPtr {.importc.}
