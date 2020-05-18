@@ -33,13 +33,6 @@ func newWindowCtx(): WindowCtx =
   result = WindowCtx(
     canvas: newCanvasCtx())
 
-func onConfig(
-  w: DrawingArea,
-  ev: EventConfig,
-  ctx: var CanvasCtx
-): bool =
-  ctx.surface = newSurface(w)
-
 func onRealize(
   w: DrawingArea,
   ctx: var CanvasCtx
@@ -49,6 +42,7 @@ func onRealize(
   # and produce non-smooth drawing
   # curves
   w.setEventCompression(false)
+  ctx.surface = newSurface(w)
 
 # XXX use lastPressure avg for smoother
 #     pressure transitions
@@ -80,85 +74,44 @@ func onMouseRelease(
 ): bool =
   w.queueDraw()
 
-# Xorg takes 20% CPU
-when true:
-  func onMouseMove(
-    w: DrawingArea,
-    ev: EventMotion,
-    ctx: var CanvasCtx
-  ): bool =
-    template lastBrush: untyped = ctx.brushes[^1]
-    if buttonPressMask in ev.state:
-      #debugEcho "move"
-      doAssert ctx.brushes.len > 0
-      let brWidth = 10.0 * ctx.lastPressure
-      lastBrush.points.add (width: brWidth, x: ev.x, y: ev.y)
-      if lastBrush.points.len == 1: return
-      var scr = newCairo(ctx.surface)
-      scr.setSourceRgba(
-        lastBrush.red,
-        lastBrush.green,
-        lastBrush.blue,
-        lastBrush.alpha)
-      scr.setLineCap()
-      scr.setLineJoin()
-      scr.newPath()
-      scr.setLineWidth(brWidth)
-      let x0 = lastBrush.points[^2].x
-      let y0 = lastBrush.points[^2].y
-      scr.moveTo(x0, y0)
-      scr.lineTo(ev.x, ev.y)
-      scr.stroke()
-      w.queueDrawCoors(x0, y0, ev.x, ev.y, brWidth)
-
-  func onDraw(w: DrawingArea, cr: Cairo, ctx: var CanvasCtx): bool =
-    cr.setSourceSurface(ctx.surface, 0, 0)
-    cr.paint()
-
-# Xorg uses too much CPU doing this.
-# and the drawing is laggy
-when false:
-  func onMouseMove(
-    w: DrawingArea,
-    ev: EventMotion,
-    ctx: var CanvasCtx
-  ): bool =
-    if buttonPressMask in ev.state:
-      #debugEcho "move"
-      doAssert ctx.brushes.len > 0
-      ctx.brushes[^1].points.add((
-        width: 10.0 * ctx.lastPressure,
-        x: ev.x,
-        y: ev.y))
-      w.queueDraw()
-
-  func onDraw(w: DrawingArea, cr: Cairo, ctx: var CanvasCtx): bool =
-    template prev: untyped = br.points[i-1]
-    template curr: untyped = br.points[i]
-    #debugEcho "draw"
+func onMouseMove(
+  w: DrawingArea,
+  ev: EventMotion,
+  ctx: var CanvasCtx
+): bool =
+  template lastBrush: untyped = ctx.brushes[^1]
+  if buttonPressMask in ev.state:
+    #debugEcho "move"
+    doAssert ctx.brushes.len > 0
+    let brWidth = 10.0 * ctx.lastPressure
+    lastBrush.points.add (width: brWidth, x: ev.x, y: ev.y)
+    if lastBrush.points.len == 1: return
     var scr = newCairo(ctx.surface)
-    scr.setSourceRgba(0, 0, 0, 1)
-    scr.paint()
-    for br in ctx.brushes:
-      #debugEcho br
-      scr.setSourceRgba(br.red, br.green, br.blue, br.alpha)
-      scr.setLineCap()
-      scr.setLineJoin()
-      scr.newPath()
-      for i in 1 .. br.points.len-1:
-        scr.setLineWidth(curr.width)
-        scr.moveTo(prev.x, prev.y)
-        scr.lineTo(curr.x, curr.y)
-        scr.stroke()
-    cr.setSourceSurface(ctx.surface, 0, 0)
-    cr.paint()
+    scr.setSourceRgba(
+      lastBrush.red,
+      lastBrush.green,
+      lastBrush.blue,
+      lastBrush.alpha)
+    scr.setLineCap()
+    scr.setLineJoin()
+    scr.setLineWidth(brWidth)
+    let x0 = lastBrush.points[^2].x
+    let y0 = lastBrush.points[^2].y
+    scr.moveTo(x0, y0)
+    scr.lineTo(ev.x, ev.y)
+    scr.stroke()
+    w.queueDrawArea(x0, y0, ev.x, ev.y, brWidth)
 
-func canvas(ctx: var CanvasCtx): DrawingArea =
+func onDraw(w: DrawingArea, cr: Cairo, ctx: var CanvasCtx): bool =
+  cr.setSourceSurface(ctx.surface, 0, 0)
+  cr.paint()
+
+func canvasArea(ctx: var CanvasCtx): DrawingArea =
   result = newDrawingArea()
+  result.setSizeRequest(800, 800)
   var stylus = newStylus(result)
   stylus.signalConnect(evStylusMotion, onStylusMove, ctx)
   result.signalConnect(evDraw, onDraw, ctx)
-  result.signalConnect(evConfig, onConfig, ctx)
   result.signalConnect(evMotion, onMouseMove, ctx)
   result.signalConnect(evButtonPress, onMousePress, ctx)
   result.signalConnect(evButtonRelease, onMouseRelease, ctx)
@@ -170,14 +123,21 @@ func canvas(ctx: var CanvasCtx): DrawingArea =
     buttonReleaseMask +
     touchMask)
 
+func canvasContainer(ctx: var CanvasCtx): ScrolledWindow =
+  var hBox = newBox(orientation = hBox)
+  var vBox = newBox(orientation = vBox)
+  var cv = canvasArea(ctx)
+  hBox.pack_start(cv, fill = false)
+  vBox.pack_start(hBox, fill = false)
+  result = newScrolledWindow()
+  result.add vBox
+
 func mainWindow(app: App, ctx: var WindowCtx): bool =
   var w = app.newWindow()
   w.setTitle("nitepad")
   w.setDefaultSize(400, 400)
-  var box = newBox(spacing = 5)
-  w.add(box)
-  var cv = canvas(ctx.canvas)
-  box.pack_start(cv)
+  var cvContainer = canvasContainer(ctx.canvas)
+  w.add(cvContainer)
   w.showAll()
 
 proc main() =
