@@ -116,18 +116,19 @@ func queueDrawArea*(
   x1, y1, x2, y2: float64,
   offset: float64
 ) {.inline.} =
-  let ox1 = min(x1, x2)-offset
-  let oy1 = min(y1, y2)-offset
-  let ox2 = max(x1, x2)+offset
-  let oy2 = max(y1, y2)+offset
-  let x = max(0, ox1.toInt-1)
-  let y = max(0, oy1.toInt-1)
-  let wh = max(0, ox2.toInt+1-x)
-  let ht = max(0, oy2.toInt+1-y)
-  let wWh = gtk_widget_get_allocated_width(cast[GtkWidgetPtr](w))
-  let wHt = gtk_widget_get_allocated_height(cast[GtkWidgetPtr](w))
-  let width = min(wWh, wh)
-  let height = min(wHt, ht)
+  let
+    ox1 = min(x1, x2)-offset
+    oy1 = min(y1, y2)-offset
+    ox2 = max(x1, x2)+offset
+    oy2 = max(y1, y2)+offset
+    x = max(0, ox1.toInt-1)
+    y = max(0, oy1.toInt-1)
+    wh = max(0, ox2.toInt+1-x)
+    ht = max(0, oy2.toInt+1-y)
+    wWh = gtk_widget_get_allocated_width(cast[GtkWidgetPtr](w))
+    wHt = gtk_widget_get_allocated_height(cast[GtkWidgetPtr](w))
+    width = min(wWh, wh)
+    height = min(wHt, ht)
   w.queueDrawArea(x.int32, y.int32, width.int32, height.int32)
 
 func newScrolledWindow*(): ScrolledWindow {.inline.} =
@@ -212,18 +213,6 @@ template signalConnect*[T, U](
       callback(cast[T](inst2), cast[var U](data2))
     discard g_signal_connect(
       cast[pointer](inst), $ev, cast[GCallback](wrapper), addr data)
-
-template signalConnect*[T](
-  inst: T,
-  ev: Event,
-  callback: proc (inst: T): bool,
-): untyped =
-  bind g_signal_connect
-  block:
-    proc wrapper(inst2: pointer): bool {.inline.} =
-      callback(cast[T](inst2))
-    discard g_signal_connect(
-      cast[pointer](inst), $ev, cast[GCallback](wrapper), nil)
 
 # Gestures
 template signalConnect*[T, U, V](

@@ -4,22 +4,24 @@ import nitepad/gtk
 
 type
   Point = tuple
-    width, x, y: float64
+    x, y: float64
   Brush = object
-    red, green, blue, alpha: float64
-    points: seq[Point]
+    width, red, green, blue, alpha: float64
   CanvasCtx = ref object
     surface: Surface
-    brushes: seq[Brush]
+    brush: Brush
+    joinPoint: bool
+    lastPoint: Point
     lastPressure: float64
     width, height: int32
   WindowCtx = ref object
     canvas: CanvasCtx
 
 func brush(
-  red, green, blue, alpha: float64
+  width, red, green, blue, alpha: float64
 ): Brush =
   Brush(
+    width: width,
     red: red,
     green: green,
     blue: blue,
@@ -28,6 +30,8 @@ func brush(
 func newCanvasCtx(): CanvasCtx =
   new result
   result = CanvasCtx(
+    brush: brush(10, 255, 255, 0, 1),
+    joinPoint: false,
     lastPressure: 1,
     width: 800,
     height: 800)
@@ -66,9 +70,8 @@ func onMousePress(
 ): bool =
   if ev.button == buttonPrimary:
     #debugEcho "press"
-    var br = brush(255, 255, 0, 1)
-    #br.points.add((width: 12.0, x: ev.x, y: ev.y))
-    ctx.brushes.add br
+    ctx.joinPoint = false
+    ctx.lastPressure = 1
     w.queueDraw()
 
 func onMouseRelease(
@@ -83,28 +86,29 @@ func onMouseMove(
   ev: EventMotion,
   ctx: var CanvasCtx
 ): bool =
-  template lastBrush: untyped = ctx.brushes[^1]
+  template x0: untyped = ctx.lastPoint.x
+  template y0: untyped = ctx.lastPoint.y
   if buttonPressMask in ev.state:
     #debugEcho "move"
-    doAssert ctx.brushes.len > 0
-    let brWidth = 10.0 * ctx.lastPressure
-    lastBrush.points.add (width: brWidth, x: ev.x, y: ev.y)
-    if lastBrush.points.len == 1: return
+    if not ctx.joinPoint:
+      ctx.joinPoint = true
+      ctx.lastPoint = (x: ev.x, y: ev.y)
+      return
+    let brWidth = ctx.brush.width * ctx.lastPressure
     var scr = newCairo(ctx.surface)
     scr.setSourceRgba(
-      lastBrush.red,
-      lastBrush.green,
-      lastBrush.blue,
-      lastBrush.alpha)
+      ctx.brush.red,
+      ctx.brush.green,
+      ctx.brush.blue,
+      ctx.brush.alpha)
     scr.setLineCap()
     scr.setLineJoin()
     scr.setLineWidth(brWidth)
-    let x0 = lastBrush.points[^2].x
-    let y0 = lastBrush.points[^2].y
     scr.moveTo(x0, y0)
     scr.lineTo(ev.x, ev.y)
     scr.stroke()
     w.queueDrawArea(x0, y0, ev.x, ev.y, brWidth)
+    ctx.lastPoint = (x: ev.x, y: ev.y)
 
 func onDraw(w: DrawingArea, cr: Cairo, ctx: var CanvasCtx): bool =
   cr.setSourceSurface(ctx.surface, 0, 0)
@@ -153,7 +157,7 @@ func toolBar(ctx: var CanvasCtx): ToolBar =
   result = newToolBar()
   result.setSize iconMedium
   var saveBtn = newToolButton(icnSave, "Save as image")
-  result.add(saveBtn)
+  result.add saveBtn
   saveBtn.signalConnect(evClicked, onSaveAsImage, ctx)
 
 func mainWindow(app: App, ctx: var WindowCtx): bool =
