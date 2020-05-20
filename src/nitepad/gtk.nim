@@ -8,9 +8,18 @@ type
   App* = GtkApplicationPtr
   DrawingArea* = GtkDrawingAreaPtr
   Box* = GtkBoxPtr
+  ToolBar* = GtkToolbarPtr
+  ToolButton* = GtkToolButtonPtr
+  ToolItem* = ToolButton  # | ToolSeparator
+  FileChooserDialog* = GtkFileChooserDialogPtr
+  FileChooser* = FileChooserDialog  # | FileChooserWidget
+  Dialog* = GtkDialogPtr
   Window* = GtkWindowPtr
   ScrolledWindow* = GtkScrolledWindowPtr
-  Container* = Window | Box | ScrolledWindow
+  SomeDialog* = Dialog | FileChooserDialog
+  Container* =
+    Window | Box | ScrolledWindow | 
+    ToolBar | ToolItem | SomeDialog
   Widget* = Container | DrawingArea
   Event* = enum
     evActivate = "activate"
@@ -21,8 +30,10 @@ type
     evStylusMotion = "motion"
     evConfig = "configure-event"
     evRealize = "realize"
+    evClicked = "clicked"
   Cairo* = CairoPtr
   Surface* = CairoSurfacePtr  # Canvas buffer
+  SvgSurface* = CairoSurfacePtr
   Stylus* = GtkGestureStylusPtr
   EventMotion* = GdkEventMotionPtr
   EventButton* = GdkEventButtonPtr
@@ -30,15 +41,26 @@ type
   EventMask* = distinct uint
   MouseButton* = distinct uint
   AxisUse* = GdkAxisUse
+  IconSize* = GtkIconSize
+  IconName* = enum
+    icnSave = "document-save"
+  FileChooserAction* = GtkFileChooserAction
+  DialogResponseType* = GtkResponseType
 
 const
-  vBox* = GTK_ORIENTATION_VERTICAL
-  hBox* = GTK_ORIENTATION_HORIZONTAL
+  oriVertical* = GTK_ORIENTATION_VERTICAL
+  oriHorizontal* = GTK_ORIENTATION_HORIZONTAL
   lineCapRound* = CAIRO_LINE_CAP_ROUND
   lineJoinRound* = CAIRO_LINE_JOIN_ROUND
   buttonPrimary* = GDK_BUTTON_PRIMARY.MouseButton
   axisPressure* = GDK_AXIS_PRESSURE
   policyAutomatic* = GTK_POLICY_AUTOMATIC
+  iconSmall* = GTK_ICON_SIZE_SMALL_TOOLBAR
+  iconMedium* = GTK_ICON_SIZE_LARGE_TOOLBAR
+  iconLarge* = GTK_ICON_SIZE_DND
+  fcSave* = GTK_FILE_CHOOSER_ACTION_SAVE
+  dgAccept* = GTK_RESPONSE_ACCEPT
+  dgCancel* = GTK_RESPONSE_CANCEL
 
 const
   pointerMotionMask* = GDK_POINTER_MOTION_MASK.EventMask
@@ -61,6 +83,19 @@ func `+`*(a: EventMask, b: int32): EventMask {.inline.} =
 func `+`*(a, b: EventMask): EventMask {.inline.} =
   (a.uint or b.uint).EventMask
 
+func run*(dg: SomeDialog): DialogResponseType {.inline.} =
+  gtk_dialog_run(cast[GtkDialogPtr](dg)).DialogResponseType
+
+# remove this crap?
+func isWindow(w: GtkWidgetPtr): bool {.inline.} =
+  g_type_check_instance_is_a(cast[GTypeInstancePtr](w), gtk_window_get_type())
+
+func window*(w: Widget): Window {.inline.} =
+  var widget = gtk_widget_get_toplevel(cast[GtkWidgetPtr](w))
+  doAssert widget != nil
+  doAssert widget.isWindow()
+  result = cast[Window](widget)
+
 func setSizeRequest*(w: Widget, width, height: int32) {.inline.} =
   gtk_widget_set_size_request(cast[GtkWidgetPtr](w), width, height)
 
@@ -73,7 +108,7 @@ func getEvents*(w: Widget): int32 {.inline.} =
 func queueDraw*(w: Widget) {.inline.} =
   gtk_widget_queue_draw(cast[GtkWidgetPtr](w))
 
-func queueDrawArea*(w: Widget, x, y, width, height: int32) {.inline.} =
+func queueDrawArea(w: Widget, x, y, width, height: int32) {.inline.} =
   gtk_widget_queue_draw_area(cast[GtkWidgetPtr](w), x, y, width, height)
 
 func queueDrawArea*(
@@ -110,6 +145,45 @@ func newStylus*(parent: Widget): Stylus {.inline.} =
 func getAxis*(s: Stylus, axis: AxisUse, value: var float64): bool {.inline.} =
   gtk_gesture_stylus_get_axis(s, axis, addr value)
 
+func newToolBar*(): ToolBar {.inline.} =
+  gtk_toolbar_new()
+
+func add*(tb: ToolBar, item: ToolItem) =
+  gtk_toolbar_insert(tb, cast[GtkToolItemPtr](item), -1)
+
+func setSize*(tb: ToolBar, size: IconSize) =
+  gtk_toolbar_set_icon_size(tb, size)
+
+func newToolButton*(icon: IconName, label: string): ToolButton {.inline.} =
+  gtk_tool_button_new(
+    gtk_image_new_from_icon_name($icon, iconLarge), label)
+
+func newFileChooser*(
+  parent: Window,
+  title: string,
+  action: FileChooserAction,
+  button1text: string,
+  button1type: DialogResponseType,
+  button2text: string,
+  button2type: DialogResponseType
+): FileChooserDialog {.inline.} =
+  gtk_file_chooser_dialog_new(
+    title, parent, action, button1text,
+    button1type, button2text, button2type, nil)
+
+func destroy*(fc: FileChooserDialog) {.inline.} =
+  gtk_widget_destroy(cast[GtkWidgetPtr](fc))
+
+func setDoOverwriteConfirmation*(
+  fc: FileChooser,
+  overwrite: bool
+) {.inline.} =
+  gtk_file_chooser_set_do_overwrite_confirmation(
+    cast[GtkFileChooserPtr](fc), overwrite)
+
+func filename*(fc: FileChooser): string {.inline.} =
+  $gtk_file_chooser_get_filename(cast[GtkFileChooserPtr](fc))
+
 func newApp*(name: string): App {.inline.} =
   gtk_application_new(name, G_APPLICATION_FLAGS_NONE)
 
@@ -138,6 +212,18 @@ template signalConnect*[T, U](
       callback(cast[T](inst2), cast[var U](data2))
     discard g_signal_connect(
       cast[pointer](inst), $ev, cast[GCallback](wrapper), addr data)
+
+template signalConnect*[T](
+  inst: T,
+  ev: Event,
+  callback: proc (inst: T): bool,
+): untyped =
+  bind g_signal_connect
+  block:
+    proc wrapper(inst2: pointer): bool {.inline.} =
+      callback(cast[T](inst2))
+    discard g_signal_connect(
+      cast[pointer](inst), $ev, cast[GCallback](wrapper), nil)
 
 # Gestures
 template signalConnect*[T, U, V](
@@ -170,7 +256,10 @@ func setDefaultSize*(w: Window, width, height: int32) {.inline.} =
 func showAll*(w: Window) {.inline.} =
   gtk_widget_show_all(cast[GtkWidgetPtr](w))
 
-func newBox*(orientation = hBox, spacing = 0'i32): Box {.inline.} =
+func newBox*(
+  orientation = oriHorizontal,
+  spacing = 0'i32
+): Box {.inline.} =
   cast[Box](gtk_box_new(orientation, spacing))
 
 func pack_start*(
@@ -194,6 +283,12 @@ func newDrawingArea*(): DrawingArea {.inline.} =
 func setEventCompression*(w: DrawingArea, compress: bool) {.inline.} =
   gdk_window_set_event_compression(
     gtk_widget_get_window(cast[GtkWidgetPtr](w)), compress)
+
+func width*(w: DrawingArea): int32 {.inline.} =
+  gtk_widget_get_allocated_width(cast[GtkWidgetPtr](w))
+
+func height*(w: DrawingArea): int32 {.inline.} =
+  gtk_widget_get_allocated_height(cast[GtkWidgetPtr](w))
 
 func setSourceRgba*(
   cr: Cairo,
@@ -235,17 +330,29 @@ func setSourceSurface*(
 ) {.inline.} =
   cairo_set_source_surface(cr, surface, x, y)
 
-func newSurface*(w: DrawingArea, width, height: int32): Surface {.inline.} =
+func newSurface*(w: DrawingArea): Surface {.inline.} =
   gdk_window_create_similar_surface(
     gtk_widget_get_window(cast[GtkWidgetPtr](w)),
     CAIRO_CONTENT_COLOR,
-    width,
-    height)
-
-func newSurface*(w: DrawingArea): Surface {.inline.} =
-  w.newSurface(
     gtk_widget_get_allocated_width(cast[GtkWidgetPtr](w)),
     gtk_widget_get_allocated_height(cast[GtkWidgetPtr](w)))
 
 func newCairo*(surface: Surface): Cairo {.inline.} =
   cairo_create(surface)
+
+func saveAsSvg*(
+  surface: Surface,
+  fname: string,
+  w, h: int32
+): bool {.inline.} =
+  # XXX destroy
+  var svg = cairo_svg_surface_create(
+    fname, w.float, h.float)
+  if svg == nil:
+    return false
+  var cr = newCairo(svg)
+  cr.setSourceSurface(surface, 0, 0)
+  cr.paint()
+  svg.cairo_surface_flush()
+  svg.cairo_surface_finish()
+  return true

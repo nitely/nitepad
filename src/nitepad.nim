@@ -12,6 +12,7 @@ type
     surface: Surface
     brushes: seq[Brush]
     lastPressure: float64
+    width, height: int32
   WindowCtx = ref object
     canvas: CanvasCtx
 
@@ -26,7 +27,10 @@ func brush(
 
 func newCanvasCtx(): CanvasCtx =
   new result
-  result = CanvasCtx(lastPressure: 1)
+  result = CanvasCtx(
+    lastPressure: 1,
+    width: 800,
+    height: 800)
 
 func newWindowCtx(): WindowCtx =
   new result
@@ -41,7 +45,7 @@ func onRealize(
   # merge motion events in queue
   # and produce non-smooth drawing
   # curves
-  w.setEventCompression(false)
+  w.setEventCompression false
   ctx.surface = newSurface(w)
 
 # XXX use lastPressure avg for smoother
@@ -64,7 +68,7 @@ func onMousePress(
     #debugEcho "press"
     var br = brush(255, 255, 0, 1)
     #br.points.add((width: 12.0, x: ev.x, y: ev.y))
-    ctx.brushes.add(br)
+    ctx.brushes.add br
     w.queueDraw()
 
 func onMouseRelease(
@@ -108,7 +112,7 @@ func onDraw(w: DrawingArea, cr: Cairo, ctx: var CanvasCtx): bool =
 
 func canvasArea(ctx: var CanvasCtx): DrawingArea =
   result = newDrawingArea()
-  result.setSizeRequest(800, 800)
+  result.setSizeRequest(ctx.width, ctx.height)
   var stylus = newStylus(result)
   stylus.signalConnect(evStylusMotion, onStylusMove, ctx)
   result.signalConnect(evDraw, onDraw, ctx)
@@ -123,25 +127,49 @@ func canvasArea(ctx: var CanvasCtx): DrawingArea =
     buttonReleaseMask +
     touchMask)
 
-func canvasContainer(ctx: var CanvasCtx): ScrolledWindow =
-  var hBox = newBox(orientation = hBox)
-  var vBox = newBox(orientation = vBox)
+func canvas(ctx: var CanvasCtx): ScrolledWindow =
+  var hBox = newBox(oriHorizontal)
+  var vBox = newBox(oriVertical)
   var cv = canvasArea(ctx)
   hBox.pack_start(cv, fill = false)
   vBox.pack_start(hBox, fill = false)
   result = newScrolledWindow()
   result.add vBox
 
+func onSaveAsImage(
+  button: ToolButton,
+  ctx: var CanvasCtx
+): bool =
+  var fc = button.window.newFileChooser(
+    "Save Image", fcSave, "_Cancel", dgCancel, "_Save", dgAccept)
+  fc.setDoOverwriteConfirmation(true)
+  var response = fc.run()
+  if response == dgAccept:
+    discard saveAsSvg(
+      ctx.surface, fc.filename, ctx.width, ctx.height)
+  fc.destroy()
+
+func toolBar(ctx: var CanvasCtx): ToolBar =
+  result = newToolBar()
+  result.setSize iconMedium
+  var saveBtn = newToolButton(icnSave, "Save as image")
+  result.add(saveBtn)
+  saveBtn.signalConnect(evClicked, onSaveAsImage, ctx)
+
 func mainWindow(app: App, ctx: var WindowCtx): bool =
   var w = app.newWindow()
-  w.setTitle("nitepad")
+  w.setTitle "nitepad"
   w.setDefaultSize(400, 400)
-  var cvContainer = canvasContainer(ctx.canvas)
-  w.add(cvContainer)
+  var cv = canvas(ctx.canvas)
+  var tb = toolBar(ctx.canvas)
+  var container = newBox(oriVertical)
+  container.pack_start(tb, expand = false, fill = false)
+  container.pack_start(cv)
+  w.add container
   w.showAll()
 
 proc main() =
-  var app = newApp("org.gtk.nitepad")
+  var app = newApp "org.gtk.nitepad"
   var ctx = newWindowCtx()
   app.signalConnect(evActivate, mainWindow, ctx)
   app.run()

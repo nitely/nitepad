@@ -30,6 +30,12 @@ type
   GtkGestureStylusPtr* = ptr object
   GtkScrolledWindowPtr* = ptr object
   GtkAdjustmentPtr* = ptr object
+  GtkToolbarPtr* = ptr object
+  GtkToolItemPtr* = ptr object
+  GtkToolButtonPtr* = ptr object
+  GtkFileChooserDialogPtr* = ptr object
+  GtkFileChooserPtr* = ptr object
+  GtkDialogPtr* = ptr object
   CairoLineCap* = enum
     CAIRO_LINE_CAP_BUTT
     CAIRO_LINE_CAP_ROUND
@@ -46,6 +52,8 @@ type
   gint8* = int8
   guint32* = uint32
   gint16* = int16
+  gulong* = culong
+  GType* = gulong
 
 type
   GdkEventType* = enum
@@ -105,6 +113,19 @@ type
     CAIRO_CONTENT_COLOR_ALPHA = 0x3000
   GtkPolicyType* = enum
     GTK_POLICY_ALWAYS, GTK_POLICY_AUTOMATIC, GTK_POLICY_NEVER, GTK_POLICY_EXTERNAL
+  GtkIconSize* = enum
+    GTK_ICON_SIZE_INVALID, GTK_ICON_SIZE_MENU, GTK_ICON_SIZE_SMALL_TOOLBAR,
+    GTK_ICON_SIZE_LARGE_TOOLBAR, GTK_ICON_SIZE_BUTTON, GTK_ICON_SIZE_DND,
+    GTK_ICON_SIZE_DIALOG
+  GtkFileChooserAction* = enum
+    GTK_FILE_CHOOSER_ACTION_OPEN, GTK_FILE_CHOOSER_ACTION_SAVE,
+    GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER, GTK_FILE_CHOOSER_ACTION_CREATE_FOLDER
+  GtkResponseType* = enum
+    GTK_RESPONSE_HELP = -11, GTK_RESPONSE_APPLY = -10, GTK_RESPONSE_NO = -9,
+    GTK_RESPONSE_YES = -8, GTK_RESPONSE_CLOSE = -7, GTK_RESPONSE_CANCEL = -6,
+    GTK_RESPONSE_OK = -5, GTK_RESPONSE_DELETE_EVENT = -4, GTK_RESPONSE_ACCEPT = -3,
+    GTK_RESPONSE_REJECT = -2, GTK_RESPONSE_NONE = -1
+  GTypeInstancePtr* = ptr object
 
 const
   GDK_BUTTON_PRIMARY* = 1
@@ -113,6 +134,11 @@ const
   GDK_BUTTON_RELEASE_MASK* = 1 shl 9
   GDK_BUTTON1_MOTION_MASK* = 1 shl 5
   GDK_TOUCH_MASK* = 1 shl 22
+
+proc g_type_check_instance_is_a*(
+  instance: GTypeInstancePtr,
+  iface_type: GType
+): gboolean {.importc.}
 
 proc gtk_application_new*(
   application_id: gstring,
@@ -145,6 +171,8 @@ proc gtk_application_window_new*(
   application: GtkApplicationPtr
 ): GtkWidgetPtr {.importc.}
 
+proc gtk_window_get_type*(): Gtype {.importc.}
+
 proc gtk_window_set_title*(
   window: GtkWindowPtr, title: gstring
 ) {.importc.}
@@ -152,6 +180,8 @@ proc gtk_window_set_title*(
 proc gtk_window_set_default_size*(
   window: GtkWindowPtr, width: gint, height: gint
 ) {.importc.}
+
+proc gtk_widget_destroy*(widget: GtkWidgetPtr) {.importc.}
 
 proc gtk_widget_set_size_request*(
   widget: GtkWidgetPtr,
@@ -162,6 +192,8 @@ proc gtk_widget_set_size_request*(
 proc gtk_widget_show_all*(widget: GtkWidgetPtr) {.importc.}
 
 proc gtk_widget_get_window*(widget: GtkWidgetPtr): GdkWindowPtr {.importc.}
+
+proc gtk_widget_get_toplevel*(widget: GtkWidgetPtr): GtkWidgetPtr {.importc.}
 
 proc gtk_widget_get_allocated_width*(widget: GtkWidgetPtr): cint {.importc.}
 
@@ -212,7 +244,7 @@ proc gtk_scrolled_window_set_min_content_width*(
   width: gint
 ) {.importc.}
 
-func gtk_scrolled_window_set_policy*(
+proc gtk_scrolled_window_set_policy*(
   scrolled_window: GtkScrolledWindowPtr,
   hscrollbar_policy: GtkPolicyType,
   vscrollbar_policy: GtkPolicyType
@@ -228,6 +260,49 @@ proc gtk_gesture_stylus_get_axis*(
   axis: GdkAxisUse,
   value: ptr gdouble
 ): gboolean {.importc.}
+
+proc gtk_toolbar_new*(): GtkToolbarPtr {.importc.}
+proc gtk_toolbar_insert*(
+  toolbar: GtkToolbarPtr,
+  item: GtkToolItemPtr,
+  pos: gint
+) {.importc.}
+proc gtk_toolbar_set_icon_size*(
+  toolbar: GtkToolbarPtr,
+  icon_size: GtkIconSize
+) {.importc.}
+
+proc gtk_tool_button_new*(
+  icon_widget: GtkWidgetPtr,
+  label: gstring
+): GtkToolButtonPtr {.importc.}
+
+proc gtk_image_new_from_icon_name*(
+  icon_name: gstring,
+  size: GtkIconSize
+): GtkWidgetPtr {.importc.}
+
+proc gtk_file_chooser_dialog_new*(
+  title: gstring,
+  parent: GtkWindowPtr,
+  action: GtkFileChooserAction,
+  first_button_text: gstring,
+  first_button_type: GtkResponseType,
+  second_button_text: gstring,
+  second_button_type: GtkResponseType,
+  ending: pointer
+): GtkFileChooserDialogPtr {.importc.}
+
+proc gtk_file_chooser_set_do_overwrite_confirmation*(
+  chooser: GtkFileChooserPtr,
+  do_overwrite_confirmation: gboolean
+) {.importc.}
+proc gtk_file_chooser_get_filename*(
+  chooser: GtkFileChooserPtr
+): gstring {.importc.}
+
+proc gtk_dialog_run*(dialog: GtkDialogPtr): gint {.importc.}
+
 
 proc cairo_set_source_rgba*(
   cr: CairoPtr,
@@ -253,6 +328,13 @@ proc cairo_set_source_surface*(
   x: cdouble,
   y: cdouble
 ) {.importc.}
+proc cairo_svg_surface_create*(
+  filename: cstring,
+  width_in_points: cdouble,
+  height_in_points: cdouble
+): CairoSurfacePtr {.importc.}
+proc cairo_surface_flush*(surface: CairoSurfacePtr) {.importc.}
+proc cairo_surface_finish*(surface: CairoSurfacePtr) {.importc.}
 
 proc gdk_window_create_similar_surface*(
   window: GdkWindowPtr,
