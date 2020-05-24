@@ -50,7 +50,14 @@ func onRealize(
   # and produce non-smooth drawing
   # curves
   w.setEventCompression false
-  ctx.surface = newSurface(w)
+  # A recording surface allows to
+  # create a vetorized SVG, instead
+  # of an SVG with an embedded PNG.
+  # It uses too much CPU, though
+  ctx.surface = newRecordingSurface(w)
+  var scr = newCairo(ctx.surface)
+  scr.setSourceRgb(0, 0, 0)
+  scr.paint()
 
 # XXX use lastPressure avg for smoother
 #     pressure transitions

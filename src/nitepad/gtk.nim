@@ -285,6 +285,12 @@ func setSourceRgba*(
 ) {.inline.} =
   cairo_set_source_rgba(cr, red, green, blue, alpha)
 
+func setSourceRgb*(
+  cr: Cairo,
+  red, green, blue: float64
+) {.inline.} =
+  cairo_set_source_rgb(cr, red, green, blue)
+
 func paint*(cr: Cairo) {.inline.} =
   cairo_paint(cr)
 
@@ -326,6 +332,21 @@ func newSurface*(w: DrawingArea): Surface {.inline.} =
     gtk_widget_get_allocated_width(cast[GtkWidgetPtr](w)),
     gtk_widget_get_allocated_height(cast[GtkWidgetPtr](w)))
 
+func newImageSurface*(w: DrawingArea): Surface {.inline.} =
+  cairo_image_surface_create(
+    CAIRO_FORMAT_ARGB32,
+    gtk_widget_get_allocated_width(cast[GtkWidgetPtr](w)),
+    gtk_widget_get_allocated_height(cast[GtkWidgetPtr](w)))
+
+func newRecordingSurface*(w: DrawingArea): Surface {.inline.} =
+  var rect = CairoRectangle(
+    x: 0,
+    y: 0,
+    width: gtk_widget_get_allocated_width(cast[GtkWidgetPtr](w)).float,
+    height: gtk_widget_get_allocated_height(cast[GtkWidgetPtr](w)).float)
+  cairo_recording_surface_create(
+    CAIRO_CONTENT_COLOR, addr rect)
+
 func newCairo*(surface: Surface): Cairo {.inline.} =
   cairo_create(surface)
 
@@ -339,6 +360,8 @@ func saveAsSvg*(
     fname, w.float, h.float)
   if svg == nil:
     return false
+  svg.cairo_svg_surface_restrict_to_version(
+    CAIRO_SVG_VERSION_1_2)
   var cr = newCairo(svg)
   cr.setSourceSurface(surface, 0, 0)
   cr.paint()

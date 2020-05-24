@@ -5,3 +5,4 @@ tests/tests
 docs/ugh
 bin/*
 bench/bench
+/asd.svg

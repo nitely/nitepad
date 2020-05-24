@@ -126,6 +126,44 @@ type
     GTK_RESPONSE_OK = -5, GTK_RESPONSE_DELETE_EVENT = -4, GTK_RESPONSE_ACCEPT = -3,
     GTK_RESPONSE_REJECT = -2, GTK_RESPONSE_NONE = -1
   GTypeInstancePtr* = ptr object
+  CairoSvgVersion* = enum
+    CAIRO_SVG_VERSION_1_1
+    CAIRO_SVG_VERSION_1_2
+  CairoSurfaceType* = enum
+    CAIRO_SURFACE_TYPE_IMAGE,
+    CAIRO_SURFACE_TYPE_PDF,
+    CAIRO_SURFACE_TYPE_PS,
+    CAIRO_SURFACE_TYPE_XLIB,
+    CAIRO_SURFACE_TYPE_XCB,
+    CAIRO_SURFACE_TYPE_GLITZ,
+    CAIRO_SURFACE_TYPE_QUARTZ,
+    CAIRO_SURFACE_TYPE_WIN32,
+    CAIRO_SURFACE_TYPE_BEOS,
+    CAIRO_SURFACE_TYPE_DIRECTFB,
+    CAIRO_SURFACE_TYPE_SVG,
+    CAIRO_SURFACE_TYPE_OS2,
+    CAIRO_SURFACE_TYPE_WIN32_PRINTING,
+    CAIRO_SURFACE_TYPE_QUARTZ_IMAGE,
+    CAIRO_SURFACE_TYPE_SCRIPT,
+    CAIRO_SURFACE_TYPE_QT,
+    CAIRO_SURFACE_TYPE_RECORDING,
+    CAIRO_SURFACE_TYPE_VG,
+    CAIRO_SURFACE_TYPE_GL,
+    CAIRO_SURFACE_TYPE_DRM,
+    CAIRO_SURFACE_TYPE_TEE,
+    CAIRO_SURFACE_TYPE_XML,
+    CAIRO_SURFACE_TYPE_SKIA,
+    CAIRO_SURFACE_TYPE_SUBSURFACE
+  CairoFormat* = enum
+    CAIRO_FORMAT_INVALID = -1,
+    CAIRO_FORMAT_ARGB32 = 0,
+    CAIRO_FORMAT_RGB24 = 1,
+    CAIRO_FORMAT_A8 = 2,
+    CAIRO_FORMAT_A1 = 3,
+    CAIRO_FORMAT_RGB16_565 = 4
+  CairoRectangle* = object
+    x*, y*, width*, height*: cdouble
+  CairoRectanglePtr* = ptr CairoRectangle
 
 const
   GDK_BUTTON_PRIMARY* = 1
@@ -303,7 +341,6 @@ proc gtk_file_chooser_get_filename*(
 
 proc gtk_dialog_run*(dialog: GtkDialogPtr): gint {.importc.}
 
-
 proc cairo_set_source_rgba*(
   cr: CairoPtr,
   red: cdouble,
@@ -311,7 +348,12 @@ proc cairo_set_source_rgba*(
   blue: cdouble,
   alpha: cdouble
 ) {.importc.}
-
+proc cairo_set_source_rgb*(
+  cr: CairoPtr,
+  red: cdouble,
+  green: cdouble,
+  blue: cdouble
+) {.importc.}
 proc cairo_paint*(cr: CairoPtr) {.importc.}
 proc cairo_set_line_width*(cr: CairoPtr, width: cdouble) {.importc.}
 proc cairo_set_line_cap*(cr: CairoPtr, line_cap: CairoLineCap) {.importc.}
@@ -335,6 +377,22 @@ proc cairo_svg_surface_create*(
 ): CairoSurfacePtr {.importc.}
 proc cairo_surface_flush*(surface: CairoSurfacePtr) {.importc.}
 proc cairo_surface_finish*(surface: CairoSurfacePtr) {.importc.}
+proc cairo_svg_surface_restrict_to_version*(
+  surface: CairoSurfacePtr,
+  version: CairoSvgVersion
+) {.importc.}
+proc cairo_surface_get_type*(
+  surface: CairoSurfacePtr
+): CairoSurfaceType {.importc.}
+proc cairo_image_surface_create*(
+  format: CairoFormat,
+  width: cint,
+  height: cint
+): CairoSurfacePtr {.importc.}
+proc cairo_recording_surface_create*(
+  content: CairoContent,
+  extents: CairoRectanglePtr
+): CairoSurfacePtr {.importc.}
 
 proc gdk_window_create_similar_surface*(
   window: GdkWindowPtr,
