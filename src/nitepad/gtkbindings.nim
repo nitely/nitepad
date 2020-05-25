@@ -2,6 +2,7 @@
 
 when defined(Linux):
   const libGtk = "libgtk-3.so.0"
+  const libRsvg = "librsvg-2.so.2"
 else:
   {.error: "Unsupported OS".}
 
@@ -54,6 +55,9 @@ type
   gint16* = int16
   gulong* = culong
   GType* = gulong
+  GErrorPtr* = ptr object
+  GErrorPtrPtr* = GErrorPtr
+  RsvgHandlePtr* = ptr object
 
 type
   GdkEventType* = enum
@@ -404,6 +408,23 @@ proc gdk_window_create_similar_surface*(
 proc gdk_window_set_event_compression*(
   window: GdkWindowPtr,
   event_compression: gboolean
+) {.importc.}
+
+{.pop.}
+
+{.push dynlib: libRsvg.}
+
+proc rsvg_handle_new_from_file*(
+  filename: gstring,
+  error: GErrorPtrPtr
+): RsvgHandlePtr {.importc.}
+proc rsvg_handle_render_cairo*(
+  handle: RsvgHandlePtr,
+  cr: CairoPtr
+): gboolean {.importc.}
+proc rsvg_handle_set_dpi*(
+  handle: RsvgHandlePtr,
+  dpi: cdouble
 ) {.importc.}
 
 {.pop.}

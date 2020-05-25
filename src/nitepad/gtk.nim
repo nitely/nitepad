@@ -44,6 +44,7 @@ type
   IconSize* = GtkIconSize
   IconName* = enum
     icnSave = "document-save"
+    icnOpen = "document-open"
   FileChooserAction* = GtkFileChooserAction
   DialogResponseType* = GtkResponseType
 
@@ -59,6 +60,7 @@ const
   iconMedium* = GTK_ICON_SIZE_LARGE_TOOLBAR
   iconLarge* = GTK_ICON_SIZE_DND
   fcSave* = GTK_FILE_CHOOSER_ACTION_SAVE
+  fcOpen* = GTK_FILE_CHOOSER_ACTION_OPEN
   dgAccept* = GTK_RESPONSE_ACCEPT
   dgCancel* = GTK_RESPONSE_CANCEL
 
@@ -345,7 +347,13 @@ func newRecordingSurface*(w: DrawingArea): Surface {.inline.} =
     width: gtk_widget_get_allocated_width(cast[GtkWidgetPtr](w)).float,
     height: gtk_widget_get_allocated_height(cast[GtkWidgetPtr](w)).float)
   cairo_recording_surface_create(
-    CAIRO_CONTENT_COLOR, addr rect)
+    CAIRO_CONTENT_COLOR_ALPHA, addr rect)
+
+func newRecordingSurface*(width, height: int32): Surface {.inline.} =
+  var rect = CairoRectangle(
+    x: 0, y: 0, width: width.float, height: height.float)
+  cairo_recording_surface_create(
+    CAIRO_CONTENT_COLOR_ALPHA, addr rect)
 
 func newCairo*(surface: Surface): Cairo {.inline.} =
   cairo_create(surface)
@@ -368,3 +376,11 @@ func saveAsSvg*(
   svg.cairo_surface_flush()
   svg.cairo_surface_finish()
   return true
+
+func loadSvg*(surface: var Surface, fname: string): bool {.inline.} =
+  var handle = rsvg_handle_new_from_file(fname, nil)
+  if handle == nil:
+    return false
+  var cr = newCairo(surface)
+  rsvg_handle_set_dpi(handle, 72)
+  result = rsvg_handle_render_cairo(handle, cr)

@@ -147,6 +147,19 @@ func canvas(ctx: var CanvasCtx): ScrolledWindow =
   result = newScrolledWindow()
   result.add vBox
 
+func onOpenImage(
+  button: ToolButton,
+  ctx: var CanvasCtx
+): bool =
+  var fc = button.window.newFileChooser(
+    "Open Image", fcOpen, "_Cancel", dgCancel, "_Open", dgAccept)
+  var response = fc.run()
+  if response == dgAccept:
+    # Reset recording
+    ctx.surface = newRecordingSurface(ctx.width, ctx.height)
+    discard loadSvg(ctx.surface, fc.filename)
+  fc.destroy()
+
 func onSaveAsImage(
   button: ToolButton,
   ctx: var CanvasCtx
@@ -166,6 +179,9 @@ func toolBar(ctx: var CanvasCtx): ToolBar =
   var saveBtn = newToolButton(icnSave, "Save as image")
   result.add saveBtn
   saveBtn.signalConnect(evClicked, onSaveAsImage, ctx)
+  var openBtn = newToolButton(icnOpen, "Open image")
+  result.add openBtn
+  openBtn.signalConnect(evClicked, onOpenImage, ctx)
 
 func mainWindow(app: App, ctx: var WindowCtx): bool =
   var w = app.newWindow()
