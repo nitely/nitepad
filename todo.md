@@ -1,5 +1,7 @@
 To do:
 
+* [ ] Workspaces / open canvas in new tab
+* [ ] Zen mode / full screen
 * [ ] Resize canvas
 * [ ] Save/load to custom format
 * [ ] Change background color
@@ -22,4 +24,5 @@ Done:
 * [x] Stylus pen support
 * [x] Keep content of canvas on resize
 * [x] Figure out what to do on resize (zoom? scroll-bars?)
-* [x] Save to SVG or something else
+* [x] Save / load to SVG or something else
+* [x] New canvas

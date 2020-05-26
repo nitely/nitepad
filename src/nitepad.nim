@@ -8,6 +8,7 @@ type
   Brush = object
     width, red, green, blue, alpha: float64
   CanvasCtx = ref object
+    dwa: DrawingArea
     surface: Surface
     brush: Brush
     joinPoint: bool
@@ -122,7 +123,8 @@ func onDraw(w: DrawingArea, cr: Cairo, ctx: var CanvasCtx): bool =
   cr.paint()
 
 func canvasArea(ctx: var CanvasCtx): DrawingArea =
-  result = newDrawingArea()
+  ctx.dwa = newDrawingArea()
+  result = ctx.dwa
   result.setSizeRequest(ctx.width, ctx.height)
   var stylus = newStylus(result)
   stylus.signalConnect(evStylusMotion, onStylusMove, ctx)
@@ -147,6 +149,23 @@ func canvas(ctx: var CanvasCtx): ScrolledWindow =
   result = newScrolledWindow()
   result.add vBox
 
+func onNewImage(
+  button: ToolButton,
+  ctx: var CanvasCtx
+): bool =
+  const msg =
+    "You are about to close the current note and create a new one. " &
+    "All unsaved changes will be lost, do you want to proceed?"
+  var dg = button.window.newDialog(msg, kind = msgQuestion)
+  var response = dg.run()
+  if response == dgOk:
+    ctx.surface = newRecordingSurface(ctx.width, ctx.height)
+    var scr = newCairo(ctx.surface)
+    scr.setSourceRgb(0, 0, 0)
+    scr.paint()
+    ctx.dwa.queueDraw()
+  dg.destroy()
+
 func onOpenImage(
   button: ToolButton,
   ctx: var CanvasCtx
@@ -158,6 +177,7 @@ func onOpenImage(
     # Reset recording
     ctx.surface = newRecordingSurface(ctx.width, ctx.height)
     discard loadSvg(ctx.surface, fc.filename)
+    ctx.dwa.queueDraw()
   fc.destroy()
 
 func onSaveAsImage(
@@ -182,6 +202,9 @@ func toolBar(ctx: var CanvasCtx): ToolBar =
   var openBtn = newToolButton(icnOpen, "Open image")
   result.add openBtn
   openBtn.signalConnect(evClicked, onOpenImage, ctx)
+  var newBtn = newToolButton(icnNew, "New image")
+  result.add newBtn
+  newBtn.signalConnect(evClicked, onNewImage, ctx)
 
 func mainWindow(app: App, ctx: var WindowCtx): bool =
   var w = app.newWindow()

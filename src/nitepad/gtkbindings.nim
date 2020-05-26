@@ -37,6 +37,7 @@ type
   GtkFileChooserDialogPtr* = ptr object
   GtkFileChooserPtr* = ptr object
   GtkDialogPtr* = ptr object
+  GtkMessageDialogPtr* = ptr object
   CairoLineCap* = enum
     CAIRO_LINE_CAP_BUTT
     CAIRO_LINE_CAP_ROUND
@@ -168,6 +169,15 @@ type
   CairoRectangle* = object
     x*, y*, width*, height*: cdouble
   CairoRectanglePtr* = ptr CairoRectangle
+  GtkDialogFlags* = enum
+    GTK_DIALOG_MODAL = 1 shl 0, GTK_DIALOG_DESTROY_WITH_PARENT = 1 shl 1,
+    GTK_DIALOG_USE_HEADER_BAR = 1 shl 2
+  GtkButtonsType* = enum
+    GTK_BUTTONS_NONE, GTK_BUTTONS_OK, GTK_BUTTONS_CLOSE, GTK_BUTTONS_CANCEL,
+    GTK_BUTTONS_YES_NO, GTK_BUTTONS_OK_CANCEL
+  GtkMessageType* = enum
+    GTK_MESSAGE_INFO, GTK_MESSAGE_WARNING, GTK_MESSAGE_QUESTION, GTK_MESSAGE_ERROR,
+    GTK_MESSAGE_OTHER
 
 const
   GDK_BUTTON_PRIMARY* = 1
@@ -344,6 +354,14 @@ proc gtk_file_chooser_get_filename*(
 ): gstring {.importc.}
 
 proc gtk_dialog_run*(dialog: GtkDialogPtr): gint {.importc.}
+
+proc gtk_message_dialog_new*(
+  parent: GtkWindowPtr,
+  flags: GtkDialogFlags,
+  `type`: GtkMessageType,
+  buttons: GtkButtonsType,
+  message_format: gstring
+): GtkMessageDialogPtr {.importc.}
 
 proc cairo_set_source_rgba*(
   cr: CairoPtr,

@@ -13,10 +13,11 @@ type
   ToolItem* = ToolButton  # | ToolSeparator
   FileChooserDialog* = GtkFileChooserDialogPtr
   FileChooser* = FileChooserDialog  # | FileChooserWidget
+  MessageDialog* = GtkMessageDialogPtr
   Dialog* = GtkDialogPtr
   Window* = GtkWindowPtr
   ScrolledWindow* = GtkScrolledWindowPtr
-  SomeDialog* = Dialog | FileChooserDialog
+  SomeDialog* = Dialog | FileChooserDialog | MessageDialog
   Container* =
     Window | Box | ScrolledWindow | 
     ToolBar | ToolItem | SomeDialog
@@ -45,8 +46,10 @@ type
   IconName* = enum
     icnSave = "document-save"
     icnOpen = "document-open"
+    icnNew = "document-new"
   FileChooserAction* = GtkFileChooserAction
   DialogResponseType* = GtkResponseType
+  DialogFlags* = GtkDialogFlags
 
 const
   oriVertical* = GTK_ORIENTATION_VERTICAL
@@ -56,6 +59,8 @@ const
   buttonPrimary* = GDK_BUTTON_PRIMARY.MouseButton
   axisPressure* = GDK_AXIS_PRESSURE
   policyAutomatic* = GTK_POLICY_AUTOMATIC
+
+const
   iconSmall* = GTK_ICON_SIZE_SMALL_TOOLBAR
   iconMedium* = GTK_ICON_SIZE_LARGE_TOOLBAR
   iconLarge* = GTK_ICON_SIZE_DND
@@ -63,6 +68,14 @@ const
   fcOpen* = GTK_FILE_CHOOSER_ACTION_OPEN
   dgAccept* = GTK_RESPONSE_ACCEPT
   dgCancel* = GTK_RESPONSE_CANCEL
+  dgOk* = GTK_RESPONSE_OK
+  dgModalDestroyWithParent* =
+    (GTK_DIALOG_MODAL.ord or
+    GTK_DIALOG_DESTROY_WITH_PARENT.ord).DialogFlags
+  msgInfo* = GTK_MESSAGE_INFO
+  msgWarning* = GTK_MESSAGE_WARNING
+  msgQuestion* = GTK_MESSAGE_QUESTION
+  btnsOkCancel* = GTK_BUTTONS_OK_CANCEL
 
 const
   pointerMotionMask* = GDK_POINTER_MOTION_MASK.EventMask
@@ -161,6 +174,16 @@ func newToolButton*(icon: IconName, label: string): ToolButton {.inline.} =
   gtk_tool_button_new(
     gtk_image_new_from_icon_name($icon, iconLarge), label)
 
+func newDialog*(
+  parent: Window,
+  msg: string,
+  flags = dgModalDestroyWithParent,
+  kind = msgInfo,
+  buttons = btnsOkCancel,
+): MessageDialog {.inline.} =
+  gtk_message_dialog_new(
+    parent, flags, kind, buttons, msg)
+
 func newFileChooser*(
   parent: Window,
   title: string,
@@ -174,8 +197,8 @@ func newFileChooser*(
     title, parent, action, button1text,
     button1type, button2text, button2type, nil)
 
-func destroy*(fc: FileChooserDialog) {.inline.} =
-  gtk_widget_destroy(cast[GtkWidgetPtr](fc))
+func destroy*(dg: SomeDialog) {.inline.} =
+  gtk_widget_destroy(cast[GtkWidgetPtr](dg))
 
 func setDoOverwriteConfirmation*(
   fc: FileChooser,
