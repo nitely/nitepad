@@ -1,5 +1,6 @@
 To do:
 
+* [ ] Exit dialog
 * [ ] Workspaces / open canvas in new tab
 * [ ] Zen mode / full screen
 * [ ] Resize canvas

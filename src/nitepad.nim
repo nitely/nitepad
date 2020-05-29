@@ -149,13 +149,13 @@ func canvas(ctx: var CanvasCtx): ScrolledWindow =
   result = newScrolledWindow()
   result.add vBox
 
-func onNewImage(
+func onNewCanvas(
   button: ToolButton,
   ctx: var CanvasCtx
 ): bool =
   const msg =
     "You are about to close the current note and create a new one. " &
-    "All unsaved changes will be lost, do you want to proceed?"
+    "All unsaved changes will be lost, do you want to continue?"
   var dg = button.window.newDialog(msg, kind = msgQuestion)
   var response = dg.run()
   if response == dgOk:
@@ -202,9 +202,9 @@ func toolBar(ctx: var CanvasCtx): ToolBar =
   var openBtn = newToolButton(icnOpen, "Open image")
   result.add openBtn
   openBtn.signalConnect(evClicked, onOpenImage, ctx)
-  var newBtn = newToolButton(icnNew, "New image")
+  var newBtn = newToolButton(icnNew, "New Note")
   result.add newBtn
-  newBtn.signalConnect(evClicked, onNewImage, ctx)
+  newBtn.signalConnect(evClicked, onNewCanvas, ctx)
 
 func mainWindow(app: App, ctx: var WindowCtx): bool =
   var w = app.newWindow()
