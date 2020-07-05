@@ -223,7 +223,7 @@ template signalConnect*[T, U, V](
   block:
     proc wrapper(
       inst2, data2, data3: pointer
-    ): bool {.inline, cdecl, gcsafe, raises: [].} =
+    ): bool {.cdecl, gcsafe, raises: [].} =
       callback(cast[T](inst2), cast[U](data2), cast[var V](data3))
     discard g_signal_connect(
       cast[pointer](inst), $ev, cast[GCallback](wrapper), addr data)
@@ -238,7 +238,7 @@ template signalConnect*[T, U](
   block:
     proc wrapper(
       inst2, data2: pointer
-    ): bool {.inline, cdecl, gcsafe, raises: [].} =
+    ): bool {.cdecl, gcsafe, raises: [].} =
       callback(cast[T](inst2), cast[var U](data2))
     discard g_signal_connect(
       cast[pointer](inst), $ev, cast[GCallback](wrapper), addr data)
@@ -254,7 +254,7 @@ template signalConnect*[T, U, V](
   block:
     proc wrapper(
       inst2: pointer, arg1, arg2: U, data3: pointer
-    ): bool {.inline, cdecl, gcsafe, raises: [].} =
+    ): bool {.cdecl, gcsafe, raises: [].} =
       callback(cast[T](inst2), arg1, arg2, cast[var V](data3))
     discard g_signal_connect(
       cast[pointer](inst), $ev, cast[GCallback](wrapper), addr data)

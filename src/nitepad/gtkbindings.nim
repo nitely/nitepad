@@ -166,7 +166,7 @@ type
     CAIRO_FORMAT_A8 = 2,
     CAIRO_FORMAT_A1 = 3,
     CAIRO_FORMAT_RGB16_565 = 4
-  CairoRectangle* = object
+  CairoRectangle* {.bycopy.} = object
     x*, y*, width*, height*: cdouble
   CairoRectanglePtr* = ptr CairoRectangle
   GtkDialogFlags* = enum

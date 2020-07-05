@@ -34,8 +34,8 @@ func newCanvasCtx(): CanvasCtx =
     brush: brush(10, 255, 255, 0, 1),
     joinPoint: false,
     lastPressure: 1,
-    width: 800,
-    height: 800)
+    width: 1920,
+    height: 1080)
 
 func newWindowCtx(): WindowCtx =
   new result
